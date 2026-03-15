@@ -1,0 +1,26 @@
+name: Android APK Build (61d171a)
+on:
+  workflow_dispatch:
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug
+      - name: Locate APK
+        run: |
+          find . -type f -name "*.apk" -print
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openclaw-android-debug-apk-61d171a
+          path: apps/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
