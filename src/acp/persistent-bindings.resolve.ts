@@ -123,14 +123,23 @@ function resolveConfiguredBindingRecord(params: {
   bindings: AgentAcpBinding[];
   channel: ConfiguredAcpBindingChannel;
   accountId: string;
-  selectConversation: (
-    binding: AgentAcpBinding,
-  ) => { conversationId: string; parentConversationId?: string } | null;
+  selectConversation: (binding: AgentAcpBinding) => {
+    conversationId: string;
+    parentConversationId?: string;
+    matchPriority?: number;
+  } | null;
 }): ResolvedConfiguredAcpBinding | null {
   let wildcardMatch: {
     binding: AgentAcpBinding;
     conversationId: string;
     parentConversationId?: string;
+    matchPriority: number;
+  } | null = null;
+  let exactMatch: {
+    binding: AgentAcpBinding;
+    conversationId: string;
+    parentConversationId?: string;
+    matchPriority: number;
   } | null = null;
   for (const binding of params.bindings) {
     if (normalizeBindingChannel(binding.match.channel) !== params.channel) {
@@ -147,23 +156,40 @@ function resolveConfiguredBindingRecord(params: {
     if (!conversation) {
       continue;
     }
+    const matchPriority = conversation.matchPriority ?? 0;
+    if (accountMatchPriority === 2) {
+      if (!exactMatch || matchPriority > exactMatch.matchPriority) {
+        exactMatch = {
+          binding,
+          conversationId: conversation.conversationId,
+          parentConversationId: conversation.parentConversationId,
+          matchPriority,
+        };
+      }
+      continue;
+    }
+    if (!wildcardMatch || matchPriority > wildcardMatch.matchPriority) {
+      wildcardMatch = {
+        binding,
+        conversationId: conversation.conversationId,
+        parentConversationId: conversation.parentConversationId,
+        matchPriority,
+      };
+    }
+  }
+  if (exactMatch) {
     const spec = toConfiguredBindingSpec({
       cfg: params.cfg,
       channel: params.channel,
       accountId: params.accountId,
-      conversationId: conversation.conversationId,
-      parentConversationId: conversation.parentConversationId,
-      binding,
+      conversationId: exactMatch.conversationId,
+      parentConversationId: exactMatch.parentConversationId,
+      binding: exactMatch.binding,
     });
-    if (accountMatchPriority === 2) {
-      return {
-        spec,
-        record: toConfiguredAcpBindingRecord(spec),
-      };
-    }
-    if (!wildcardMatch) {
-      wildcardMatch = { binding, ...conversation };
-    }
+    return {
+      spec,
+      record: toConfiguredAcpBindingRecord(spec),
+    };
   }
   if (!wildcardMatch) {
     return null;
@@ -426,6 +452,7 @@ export function resolveConfiguredAcpBindingRecord(params: {
             parsed.scope === "group_topic" || parsed.scope === "group_topic_sender"
               ? parsed.chatId
               : undefined,
+          matchPriority: matchesCanonicalConversation ? 2 : 1,
         };
       },
     });

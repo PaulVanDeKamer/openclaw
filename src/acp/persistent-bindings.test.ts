@@ -226,6 +226,34 @@ describe("resolveConfiguredAcpBindingRecord", () => {
     expect(resolved?.spec.agentId).toBe("claude");
   });
 
+  it("prefers sender-scoped Feishu bindings over topic inheritance", () => {
+    const cfg = createCfgWithBindings([
+      createFeishuBinding({
+        agentId: "codex",
+        conversationId: "oc_group_chat:topic:om_topic_root",
+        accountId: "work",
+      }),
+      createFeishuBinding({
+        agentId: "claude",
+        conversationId: "oc_group_chat:topic:om_topic_root:sender:ou_sender_1",
+        accountId: "work",
+      }),
+    ]);
+
+    const resolved = resolveConfiguredAcpBindingRecord({
+      cfg,
+      channel: "feishu",
+      accountId: "work",
+      conversationId: "oc_group_chat:topic:om_topic_root:sender:ou_sender_1",
+      parentConversationId: "oc_group_chat",
+    });
+
+    expect(resolved?.spec.conversationId).toBe(
+      "oc_group_chat:topic:om_topic_root:sender:ou_sender_1",
+    );
+    expect(resolved?.spec.agentId).toBe("claude");
+  });
+
   it("prefers exact account binding over wildcard for the same discord conversation", () => {
     const cfg = createCfgWithBindings([
       createDiscordBinding({

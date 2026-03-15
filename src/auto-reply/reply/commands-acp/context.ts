@@ -31,7 +31,21 @@ function parseFeishuTargetId(raw: unknown): string | undefined {
 }
 
 function parseFeishuDirectConversationId(raw: unknown): string | undefined {
-  const id = parseFeishuTargetId(raw);
+  const target = normalizeConversationText(raw);
+  if (!target) {
+    return undefined;
+  }
+  const withoutProvider = target.replace(/^(feishu|lark):/i, "").trim();
+  if (!withoutProvider) {
+    return undefined;
+  }
+  const lowered = withoutProvider.toLowerCase();
+  for (const prefix of ["user:", "dm:", "open_id:"]) {
+    if (lowered.startsWith(prefix)) {
+      return normalizeConversationText(withoutProvider.slice(prefix.length));
+    }
+  }
+  const id = parseFeishuTargetId(target);
   if (!id) {
     return undefined;
   }

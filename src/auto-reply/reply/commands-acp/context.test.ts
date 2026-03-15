@@ -266,6 +266,24 @@ describe("commands-acp context", () => {
     expect(resolveAcpCommandConversationId(params)).toBe("ou_sender_1");
   });
 
+  it("resolves Feishu DM conversation ids from user_id fallback targets", () => {
+    const params = buildCommandTestParams("/acp status", baseCfg, {
+      Provider: "feishu",
+      Surface: "feishu",
+      OriginatingChannel: "feishu",
+      OriginatingTo: "user:user_123",
+    });
+
+    expect(resolveAcpCommandBindingContext(params)).toEqual({
+      channel: "feishu",
+      accountId: "default",
+      threadId: undefined,
+      conversationId: "user_123",
+      parentConversationId: undefined,
+    });
+    expect(resolveAcpCommandConversationId(params)).toBe("user_123");
+  });
+
   it("does not infer a Feishu DM parent conversation id during fallback binding lookup", () => {
     const params = buildCommandTestParams("/acp status", baseCfg, {
       Provider: "feishu",
